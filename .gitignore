@@ -1,0 +1,7 @@
+.vscode
+.DS_Store
+.*.swp
+*~
+a.out
+*.o
+m6502-changes.diff

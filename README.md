@@ -46,8 +46,8 @@ Simply say `make`, if all the needed tools are installed. What you need:
 
 * standard UNIX or UNIX-like environment, with the usual common tools/utilities
 * `CC65` suite installed (including `CA65` assembler and it's `CL65` frontend)
-* Python3 for the converter utility
-* GNU make (probably BSD make would work as well, I am not sure)
+* `Python3` for the converter utility
+* GNU `make` (probably BSD make would work as well, I am not sure)
 
 If needed, `Makefile` can be customized.
 

@@ -5,8 +5,16 @@ MIT license) 6502 BASIC to a modern 6502 assember (CA65). Of course this
 project of mine is also MIT licensed, based on Microsoft's MIT licensed
 original source.
 
-* (C)1978 MICRO-SOFT (the original source)
-* (C)2025 Gabor Lenart (lgb) - the conversion/modification/etc project of mine
+* (C)1976 MICRO-SOFT (the original source)
+* (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine
+
+Note: at least now initially, it's not the goal of the project to "modernize"
+the source, what I try is to be able to be assembled with a modern assembler
+(CA65) but trying to preserve as many "old/original style" of the source as
+possible. Clearly, there is room to make it much more clear at many-many
+places, but it's not on my radar (yet).
+
+TL;DR what you want to check out here is `m6502-converted.asm`, but first:
 
 ## WARNING
 
@@ -20,8 +28,8 @@ Microsoft's 6502 BASIC repository: https://github.com/microsoft/BASIC-M6502
 
 Original readme from Microsoft: https://github.com/microsoft/BASIC-M6502/blob/main/README.md
 
-(By the way, "MICRO-SOFT" is intentional, as they used the name this way in 1978. I try to
-be consistent and use MICRO-SOFT when I talk about the source from 1978, and Microsoft, when
+(By the way, "MICRO-SOFT" is intentional, as they used the name this way in 1976-78. I try to
+be consistent and use MICRO-SOFT when I talk about the source from ~1978, and Microsoft, when
 we talk about the current Microsoft who released the source. Of course Microsoft - and probably
 also MICRO-SOFT - is a registered trendmark owned by Microsoft, ... sorry, IANAL).
 
@@ -46,15 +54,12 @@ If needed, `Makefile` can be customized.
 ## In-depth details about the conversion and the original assembly source
 
 My findings and guess-work on the assembler and assembly syntax used
-by Micro-soft to write 6502 MBASIC. Warning: I can be easily wrong here,
+by MICRO-SOFT to write 6502 MBASIC. Warning: I can be easily wrong here,
 or at least my explanation is not very precise.
 
-(C)1978 MICRO-SOFT (the original source)
-(C)2025 Gabor Lenart (lgb) - the conversion project of mine
-
-As far as I can guess, the original assembler used by Microsoft was MACRO-10
+As far as I can guess, the original assembler used by MICRO-SOFT was MACRO-10
 running on a PDP-11 machine. However, MACRO-10 is a PDP assembler, it does
-not know about 6502 at all. What Microsoft probably did: they wrote a macro
+not know about 6502 at all. What MICRO-SOFT probably did: they wrote a macro
 pack implementing 6502 opcodes. Unfortunately, there is no information about
 that extra "pack". This would also explain why there are some odd choices,
 like these examples:
@@ -68,11 +73,30 @@ be considered as an extra parameter to the `LDA` macro. So it seems, any
 "standard" 6502 assembly syntax which had things like `#`, `,` as part of
 the syntax had to be solved differently.
 
-Other than that, MACRO-10 has a very strange syntax from today's point of
-view.
+How do I know it was MACRO-10? I cannot know for sure, just guessing. After
+searching the web for assembler directives used in the source, I had the
+conclusion that maybe it was MACRO-10. Just by have a look on some MACRO-10
+assembly sources then, it was quite clear, that it should be that, or at
+least very close. The source also has a "REALIO target" called "SIMULATION"
+and some conditional assembly statements in that case uses "strange" opcodes
+which - after some search - turned out to be PDP-11 assembly instructions.
+Also, I wouldn't ever think a PDP-11 assembler knows about 6502. Combined
+this with some "strange" syntax like "LDAI", I had the conclusion, that they
+are just macros, basically implementing a "kind of" 6502 assembler based on
+MACRO-10's macro capabilities. Again: this is guess-work from my side, I
+can be wrong ...
+
+Other than those above, MACRO-10 has a very strange syntax from today's
+point of view.
 
 For example `<...>` were used as `(...)` in expressions but also for
-marking blocks for a `DEFINE` or `REPEAT`.
+marking blocks for a `DEFINE` or `REPEAT`. This is a pattern with MACRO-10,
+many things used for multiple purposes, and hard to tell the actual meaning.
+This also means, a fully automated converter is harder to be written, thus
+my choice to use a semi-automated approach: I have some manually massaged
+source (`m6502-orig.asm`) which couldn't be compiled neither MACRO-10
+nor CA65. It's just an intermediate step, to help my converter to be really
+simple (sort of ...) and trivial.
 
 Also "naked" numbers in the source are translated to directly emitting byte
 into the output file:

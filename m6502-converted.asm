@@ -3,6 +3,9 @@
 ; SALL
 ; RADIX 10			;THROUGHOUT ALL BUT MATH-PAK.
 
+; (C)1976 MICRO-SOFT (the original source)
+; (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine to port this to CA65 assembler
+
 .MACRO ORG n
 .ORG n
 .ENDMACRO

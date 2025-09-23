@@ -4,6 +4,11 @@
 import re, sys
 
 
+# (C)2025 Gabor Lenart "LGB" - lgblgblgb@gmail.com
+
+# my VERY ugly converter, under constant hacking and rewriting/experimenting - does a "half job", manual work is needed before on the original source
+# WARNING - WARNING: this is really ugly python code, basically I am experimenting with it, without any sanity to have nice code or anything
+# at least at this early point of the project ...
 
 conv_errors = []
 
@@ -55,6 +60,9 @@ radix = 10
 #faszom()
 
 emithelper = """
+; (C)1976 MICRO-SOFT (the original source)
+; (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine to port this to CA65 assembler
+
 .MACRO ORG n
 .ORG n
 .ENDMACRO

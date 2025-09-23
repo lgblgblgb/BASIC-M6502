@@ -39,6 +39,7 @@ also MICRO-SOFT - is a registered trendmark owned by Microsoft, ... sorry, IANAL
 * `m6502-orig.asm` - my "hand modified" version of the above, to easy the task of the converter script, which does not do a full automated conversion
 * `m6502-converted.asm` - the result assembly file from my conversion, which should be assembled with CA65
 * `converter.py` - my VERY ugly converter, under constant hacking and rewriting/experimenting - does a "half job", manual work is needed before (see above the comment on file `m6502-orig.asm`)
+* `cutter.py` - cuts the final binary, see the "in depth" section's "link" sub-section ... Quite unfortunate ...
 
 ## Assembly process
 
@@ -179,3 +180,32 @@ MACRO-10 seems to have reassingable symbols. It looks like the syntax
 this in a way that it's re-definable. My idea here, that I simply
 replace `==` with `.SET` for CA65.
 
+### Link it ...
+
+The final major problem, that probably some kind of linking phase was
+done. But we don't have ANY information about the linker config as
+we don't have any "macro pack" for MACRO-10 either :(
+
+What's the problem? Well, it's quite interesting. It's mainly about
+relocatable code. In modern CA65 way, we usually create a segment with
+different "LOAD" and "RUN" address. Surely, the code must relocate
+the code based on that information. Anyway, M6502 BASIC does something
+horrific: it acually codes the same routine TWICE. In the real place
+(RAM routine) and in ROM too, so ROM can copy to RAM.
+
+This alone is not even the problem, but a modern assembler wouldn't
+understand the two copies being one actually. I have the suspect that
+the missing "linkage" phase would solve the problem in the original
+development environment.
+
+Since I don't know the details, I used an ugly trick: just before
+the "real" ROM starts in the source, I put a placeholder ID string
+to be in the output binary. And an external python script - cutter.py -
+will cut the binary till that point.
+
+The normal solution would be, to remove the duplicated routine, t put
+it into a segment, etc etc. But my goal here is try to preserve the
+original source as much as possible even if it's a horrofic thing
+as its own ... Also that solution will cause to loose the ability
+to build exact image (hopefully) as MACRO-10 would be, since in
+different segment, the placement would be different.

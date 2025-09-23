@@ -63,9 +63,14 @@ emithelper = """
 ; (C)1976 MICRO-SOFT (the original source)
 ; (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine to port this to CA65 assembler
 
-.MACRO ORG n
-.ORG n
+.MACRO ORG addr
+    .ORG addr
 .ENDMACRO
+
+.MACRO  BLOCK   n
+    .RES    n
+.ENDMACRO
+
 
 .DEFINE ADR(W) .WORD W
 
@@ -170,7 +175,7 @@ with open(sys.argv[1]) as f:
         main = re.sub(r"^[\t ]*IFE[\t ]+([^,]+)", r".IF\t\1 = 0", main)
         main = re.sub(r"^[\t ]*IFN[\t ]+([^,]+)", r".IF\t\1 != 0", main)
 
-        main = re.sub(r"([\t :])BLOCK([\t ])", r"\1.RES\2", main)
+        #main = re.sub(r"([\t :])BLOCK([\t ])", r"\1.RES\2", main)
 
         main = re.sub(r"XWD[\t ]+[^,]+,", r".BYTE\t", main)
 

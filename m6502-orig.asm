@@ -1076,6 +1076,13 @@ FBUFFR: BLOCK	3*ADDPRC+13	;BUFFER FOR "FOUT".
 PAGE
 SUBTTL	DISPATCH TABLES, RESERVED WORDS, AND ERROR TEXTS.
 
+
+; LGB: the trick that the "cutter" then extract the real binary, MUST be exactly before "ORG ROMLOC"
+.BYTE	"{{CUT#HERE}}"
+.WORD	ROMLOC
+.WORD	INIT	; also give information about the entry point
+; LGB: end of hack
+
 	ORG	ROMLOC
 
 STMDSP: ADR(END-1)
@@ -7363,3 +7370,9 @@ TSTACK:	BLOCK	13600
 ;>
 ;IFNDEF	START,<START==0>
 ;	END	$Z+START
+
+
+.OUT .SPRINTF("LGB: ROMLOC=$%04X", ROMLOC)
+.OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
+
+

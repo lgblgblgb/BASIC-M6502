@@ -63,54 +63,7 @@ emithelper = """
 ; (C)1976 MICRO-SOFT (the original source)
 ; (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine to port this to CA65 assembler
 
-.MACRO ORG addr
-    .ORG addr
-.ENDMACRO
-
-.MACRO  BLOCK   n
-    .RES    n
-.ENDMACRO
-
-
-.DEFINE ADR(W) .WORD W
-
-.MACRO DT txt
-.BYTE txt
-.ENDMACRO
-
-.MACRO  REPEAT  n,what
-.REPEAT n
-what
-.ENDREPEAT
-.ENDMACRO
-
-.MACRO  LDADY addr
-;       LDADY --> LDA addr,Y
-    LDA addr,Y
-.ENDMACRO
-
-.MACRO  STADY addr
-;       STADY --> STA addr,Y
-    STA addr,Y
-.ENDMACRO
-
-.MACRO  SBCDY addr
-    SBC addr,Y
-.ENDMACRO
-
-.MACRO  CMPDY addr
-    CMP addr,Y
-.ENDMACRO
-
-.MACRO  ADCDY addr
-    ADC addr,Y
-.ENDMACRO
-
-.MACRO  JMPD addr
-    JMP (addr)
-.ENDMACRO
-
-
+.INCLUDE "macros.inc"
 """
 
 

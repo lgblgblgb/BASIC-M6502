@@ -52,6 +52,20 @@ Simply say `make`, if all the needed tools are installed. What you need:
 
 If needed, `Makefile` can be customized.
 
+## Simulation
+
+The original MACRO-10 assembly source suggests that there was a "SIMULATION"
+mode when the development PDP-10 emulated 6502. For that, the source must be
+assembled with `REALIO=0`. I try to replicate this with a modern environment
+by implementing a simulator; not for PDP-10 though, but in Python. It uses
+py65emu, which you can install with `pip` (probably you need `pip3`):
+
+    pip3 install py65emu
+
+After that, you can use the "simulate" target in the `Makefile`:
+
+    make simulator
+
 ## In-depth details about the conversion and the original assembly source
 
 My findings and guess-work on the assembler and assembly syntax used
@@ -59,7 +73,7 @@ by MICRO-SOFT to write 6502 MBASIC. Warning: I can be easily wrong here,
 or at least my explanation is not very precise.
 
 As far as I can guess, the original assembler used by MICRO-SOFT was MACRO-10
-running on a PDP-11 machine. However, MACRO-10 is a PDP assembler, it does
+running on a PDP-10 machine. However, MACRO-10 is a PDP assembler, it does
 not know about 6502 at all. What MICRO-SOFT probably did: they wrote a macro
 pack implementing 6502 opcodes. Unfortunately, there is no information about
 that extra "pack". This would also explain why there are some odd choices,
@@ -80,12 +94,17 @@ conclusion that maybe it was MACRO-10. Just by have a look on some MACRO-10
 assembly sources then, it was quite clear, that it should be that, or at
 least very close. The source also has a "REALIO target" called "SIMULATION"
 and some conditional assembly statements in that case uses "strange" opcodes
-which - after some search - turned out to be PDP-11 assembly instructions.
-Also, I wouldn't ever think a PDP-11 assembler knows about 6502. Combined
+which - after some search - turned out to be PDP-10 assembly instructions
+(I'm not too familiar with PDP-10 and PDP-11 but now it seems it should have
+been PDP-10 rather than PDP-11 because of the "HRLI" opcode).
+Also, I wouldn't ever think a PDP-10 assembler knows about 6502. Combined
 this with some "strange" syntax like "LDAI", I had the conclusion, that they
 are just macros, basically implementing a "kind of" 6502 assembler based on
 MACRO-10's macro capabilities. Again: this is guess-work from my side, I
 can be wrong ...
+
+(BREAKING NEWS: Oh, stupid me, it's right there in the source released by MS:
+`0=PDP-10 SIMULATING 6502`, so indeed, it's a PDP-10)
 
 Other than those above, MACRO-10 has a very strange syntax from today's
 point of view.
@@ -191,7 +210,11 @@ relocatable code. In modern CA65 way, we usually create a segment with
 different "LOAD" and "RUN" address. Surely, the code must relocate
 the code based on that information. Anyway, M6502 BASIC does something
 horrific: it acually codes the same routine TWICE. In the real place
-(RAM routine) and in ROM too, so ROM can copy to RAM.
+(RAM routine) and in ROM too, so ROM can copy to RAM. The danger here,
+that those two copies must be identical, though one is a "place holder",
+labels and the code length must much, also with non-ROM-able code,
+the role is different. So indeed, it's a very sensitive and hard to
+follow code in general.
 
 This alone is not even the problem, but a modern assembler wouldn't
 understand the two copies being one actually. I have the suspect that

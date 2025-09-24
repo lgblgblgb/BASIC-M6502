@@ -14,7 +14,7 @@ ALLDEPS	= Makefile converter.py cutter.py
 all:
 	$(MAKE) $(BIN)
 
-$(SRC65): $(SRC) $(ALLDEPS)
+$(SRC65): $(SRC) macros.inc $(ALLDEPS)
 	rm -f $@.tmp
 	$(PYTHON) converter.py $< > $@.tmp
 	mv $@.tmp $@
@@ -26,7 +26,10 @@ $(BINTMP): $(SRC65) $(ALLDEPS)
 $(BIN): $(BINTMP) $(ALLDEPS)
 	$(PYTHON) cutter.py $< $@
 
-clean:
-	rm -f $(MAPFILE) $(LSTFILE) $(DIFFFILE) $(BIN) $(SRC65).tmp
+simulator: $(BINTMP) $(ALLDEPS)
+	$(PYTHON) simulator.py $<
 
-.PHONY: all clean
+clean:
+	rm -f $(MAPFILE) $(LSTFILE) $(DIFFFILE) $(BIN) $(BINTMP) $(SRC65).tmp
+
+.PHONY: all clean simulator

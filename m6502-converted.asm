@@ -6,61 +6,14 @@
 ; (C)1976 MICRO-SOFT (the original source)
 ; (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine to port this to CA65 assembler
 
-.MACRO ORG addr
-    .ORG addr
-.ENDMACRO
-
-.MACRO  BLOCK   n
-    .RES    n
-.ENDMACRO
-
-
-.DEFINE ADR(W) .WORD W
-
-.MACRO DT txt
-.BYTE txt
-.ENDMACRO
-
-.MACRO  REPEAT  n,what
-.REPEAT n
-what
-.ENDREPEAT
-.ENDMACRO
-
-.MACRO  LDADY addr
-;       LDADY --> LDA addr,Y
-    LDA addr,Y
-.ENDMACRO
-
-.MACRO  STADY addr
-;       STADY --> STA addr,Y
-    STA addr,Y
-.ENDMACRO
-
-.MACRO  SBCDY addr
-    SBC addr,Y
-.ENDMACRO
-
-.MACRO  CMPDY addr
-    CMP addr,Y
-.ENDMACRO
-
-.MACRO  ADCDY addr
-    ADC addr,Y
-.ENDMACRO
-
-.MACRO  JMPD addr
-    JMP (addr)
-.ENDMACRO
-
-
+.INCLUDE "macros.inc"
 
 
 ; $Z::				;STARTING POINT FOR M6502 SIMULATOR
 	ORG	0		;START OFF AT LOCATION ZERO.
 ; SUBTTL	SWITCHES,MACROS.
 
-REALIO=4			;5=STM
+REALIO=0			;5=STM
 				;4=APPLE.
 				;3=COMMODORE.
 				;2=OSI
@@ -172,7 +125,8 @@ KIMROM .SET 1
 	STKEND .SET 507
 .ENDIF
 .IF	RORSW = 0
-.MACRO	ROR	WD
+.OUT	"LGB: Software ROR emulation is ignored."
+.MACRO	ROR_	WD	;LGB was ROR before on old CPUs do not have bug-free ROR. On modern assemblers, we cannot define a macro with an existing opcode name though.
 	LDA	#0
 	BCC	*+4
 	LDA	#$80
@@ -192,6 +146,10 @@ KIMROM .SET 1
 ; LGB: begin
 ;DEFINE	DT(Q),<
 ;IRPC	Q,<IFDIF <Q><">,<EXP "Q">>  >	;
+.IF	REALIO = 0
+	;CZGETL=^O177744
+	CZGETL	= SIM_CZGETL_ADDR
+.ENDIF
 ; LGB: end
 .MACRO	LDWD	WD
 	LDA	WD
@@ -1135,6 +1093,8 @@ FBUFFR: BLOCK	3*ADDPRC+13	;BUFFER FOR "FOUT".
 .BYTE	"{{CUT#HERE}}"
 .WORD	ROMLOC
 .WORD	INIT	; also give information about the entry point
+.WORD	IO_START_ADDR
+.BYTE	REALIO
 ; LGB: end of hack
 
 	ORG	ROMLOC
@@ -1965,14 +1925,14 @@ INCHRL: LDA	$FC00
 	AND	#127
 .ENDIF
 .IF	REALIO-1 = 0
-	JSR	$1E5A	;1E5A FOR MOS TECH.
+	JSR	$1E5A		;1E5A FOR MOS TECH.
 .ENDIF
 .IF	REALIO-4 = 0
 	JSR	CQINCH		;FD0C FOR APPLE COMPUTER.
 	AND	#127
 .ENDIF
 .IF	REALIO = 0
-	TJSR	INSIM##		;GET A CHARACTER FROM SIMULATOR
+	SIM_INSIM		;GET A CHARACTER FROM SIMULATOR
 .ENDIF
 
 .IF	REALIO <> 0
@@ -3123,7 +3083,7 @@ OUTLOC: JSR	OUTCH		;OUTPUT THE CHARACTER.
 .ENDIF
 
 .IF	REALIO = 0
-	TJSR	OUTSIM##	;CALL SIMULATOR OUTPUT ROUTINE
+	SIM_OUTSIM		;CALL SIMULATOR OUTPUT ROUTINE
 .ENDIF
 OUTRTS: AND	#255		;SET Z=0.
 GETRTS: RTS
@@ -5256,7 +5216,8 @@ FSUBT:	LDA	FACSGN
 	ZSTORDO=STORDO
 .ENDIF
 .IF	REALIO-3 = 0
-ZSTORD:!	LDA	POKER
+ZSTORDO:			; LGB: probably again the 6 char max name problem, give alternative name for CA65
+ZSTORD:	LDA	POKER		; LGB: was: ZSTORD:!
 	CMP	#$66
 	BNE	STORDO
 	LDA	POKER+1
@@ -7148,7 +7109,7 @@ INIT:
 .ENDIF
 	LDA	#76		;JMP INSTRUCTION.
 .IF	REALIO = 0
-	HRLI 1,$200	;MAKE AN INST.
+	;HRLI 1,^O1000		;MAKE AN INST.	;LGB What was its role?!
 .ENDIF
 .IF	REALIO-3 <> 0
 	STA	START
@@ -7399,7 +7360,7 @@ WORDS:	DT" BYTES FREE"
 	ACRLF
 .ENDIF
 .IF	REALIO-3 = 0
-	EXP	$D
+	EXPOP	$D		;LGB: EXP->EXPOP not to collide with the EXP: label
 .BYTE	0
 FREMES:
 .ENDIF
@@ -7414,8 +7375,8 @@ FREMES:
 .ENDIF
 .IF	REALIO-3 = 0
 	DT"### COMMODORE BASIC ###"
-	EXP	$D
-	EXP	$D
+	EXPOP	$D		;LGB: EXP->EXPOP not to collide with the EXP: label
+	EXPOP	$D		;LGB: EXP->EXPOP not to collide with the EXP: label
 .ENDIF
 .IF	REALIO-4 = 0
 	DT"APPLE BASIC V1.1"

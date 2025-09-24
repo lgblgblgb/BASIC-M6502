@@ -25,9 +25,11 @@ pos = rom.find(ID)
 
 loc  = rom[pos + len(ID) + 0] + (rom[pos + len(ID) + 1] * 256)
 init = rom[pos + len(ID) + 2] + (rom[pos + len(ID) + 3] * 256)
-rest = pos + len(ID) + 4
+ioad = rom[pos + len(ID) + 4] + (rom[pos + len(ID) + 5] * 256)
+rio  = rom[pos + len(ID) + 6]
+rest = pos + len(ID) + 7
 
-print(f"Position={pos} ROMLOC={loc:04X} INIT={init:04X}")
+print(f"Position={pos} ROMLOC={loc:04X} INIT={init:04X} REALIO={rio} IO=${ioad:04X}")
 
 rom = rom[rest:]
 

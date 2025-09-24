@@ -27,7 +27,7 @@ $(BIN): $(BINTMP) $(ALLDEPS)
 	$(PYTHON) cutter.py $< $@
 
 simulator: $(BINTMP) $(ALLDEPS)
-	$(PYTHON) simulator.py $<
+	$(PYTHON) simulator.py $< $(LSTFILE)
 
 clean:
 	rm -f $(MAPFILE) $(LSTFILE) $(DIFFFILE) $(BIN) $(BINTMP) $(SRC65).tmp

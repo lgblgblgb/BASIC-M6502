@@ -12,13 +12,29 @@ from py65emu.cpu import CPU
 #from py65emu.mmu import MMU
 
 
+lastdebug = "x"
+
+
+def DEBUG(s):
+    global lastdebug
+    return
+    print(s)
+    if cpu.r.pc in lst:
+        if lastdebug != lst[cpu.r.pc]:
+            lastdebug = lst[cpu.r.pc]
+            print(lst[cpu.r.pc])
+    pass
+
+
 class MyIO(object):
     def read(self, addr):
         return 0
     def write(self, addr, value):
         if addr == 0:
-            value &= 127
-            sys.stdout.write(chr(value))
+            sys.stdout.write(chr(value&127))
+            ##value &= 127
+            ##if value >= 32:
+            #sys.stdout.write(f"{value:02X} ")
             sys.stdout.flush()
         pass
 
@@ -39,25 +55,31 @@ class MyMMU(object):
         self.io_page_start = io_page_start
         self.io_page_end = io_page_start + 0xFF
         self.init = init
+        self.touched = []
+        for a in range(0x10000):
+            self.touched.append(True if (a >= rom_start and a <= rom_end) or (a & 0xFF00) == io_page_start else False)
         print(f"MMU: initialized with ROM at ${rom_start:04X}-${rom_end:04X}, entry point at ${init:04X}, I/O space is at ${io_page_start>>8:02X}XX")
     def read(self, addr):
         if (addr & 0xFF00) == self.io_page_start:
             value = self.io.read(addr & 0xFF)
-            print(f"MMU IO--RD @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
+            DEBUG(f"MMU IO--RD @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
         else:
             value = self.ram[addr]
-            print(f"MMU MEM-RD @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
+            DEBUG(f"MMU MEM-RD @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
+        if not self.touched[addr]:
+            DEBUG(f"MMU WARNING: reading uninitialized memory: ${addr:04X} at PC=${cpu.r.pc:04X}")
         return value
     def write(self, addr, value):
+        self.touched[addr] = True
         value &= 0xFF
         if (addr & 0xFF00) == self.io_page_start:
-            print(f"MMU IO--WR @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
+            DEBUG(f"MMU IO--WR @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
             self.io.write(addr & 0xFF, value)
         elif addr < self.rom_start or addr > self.rom_end:
-            print(f"MMU MEM-WR @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
+            DEBUG(f"MMU MEM-WR @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
             self.ram[addr] = value
         else:
-            print(f"MMU IGNORING MEM-WR @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
+            DEBUG(f"MMU WARNING IGNORING MEM-WR @ ${addr:04X} = ${value:02X} at PC=${cpu.r.pc:04X}")
     def readWord(self, addr):
         return self.read(addr) + (self.read((addr + 1) & 0xFFFF) << 8)
     def writeWord(self, addr, value):
@@ -71,12 +93,36 @@ class MyMMU(object):
 
 
 
+def load_lst(fn):
+    db = {}
+    with open(fn, "rt") as f:
+        for line in f:
+            line = line.strip()
+            if len(line) < 20:
+                continue
+            sep = line.split()
+            if len(sep) < 3:
+                continue
+            try:
+                addr = int(sep[0], 16)
+            except ValueError:
+                continue
+            if line[11] not in ("0123456789ABCDEF"):
+                continue
+            db[addr] = line
+    return db
 
 
 
 
-if len(sys.argv) != 2:
+
+
+
+
+
+if len(sys.argv) != 3:
     raise RuntimeError("Bad usage.")
+lst = load_lst(sys.argv[2])
 with open(sys.argv[1], "rb") as rom:
     rom = rom.read()
 ID = b'{{CUT#HERE}}'
@@ -108,7 +154,6 @@ mem[IO_PAGE_ADDR + 0] = 0xAD       # LDA abs opcode
 mem[IO_PAGE_ADDR + 1] = 0x00
 mem[IO_PAGE_ADDR + 2] = 0xD0
 mem[IO_PAGE_ADDR + 3] = 0x60       # RTS
-
 
 io = MyIO()
 mmu = MyMMU(mem, loc, loc + len(rom) - 1, init, IO_PAGE_ADDR, io)

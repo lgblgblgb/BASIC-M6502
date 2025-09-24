@@ -19,29 +19,30 @@
 	.ENDREPEAT
 .ENDMACRO
 
-.MACRO  LDADY	addr
-	LDA	addr,Y
-.ENDMACRO
 
 ; Guessing: EXP emits a byte, however it was removed to EXPOP not to collide with EXP as a label ...
 .MACRO	EXPOP	n
 	.BYTE	n
 .ENDMACRO
 
+.MACRO  LDADY	addr
+	LDA	(addr),Y
+.ENDMACRO
+
 .MACRO  STADY	addr
-	STA	addr,Y
+	STA	(addr),Y
 .ENDMACRO
 
 .MACRO	SBCDY addr
-	SBC	addr,Y
+	SBC	(addr),Y
 .ENDMACRO
 
 .MACRO	CMPDY	addr
-	CMP	addr,Y
+	CMP	(addr),Y
 .ENDMACRO
 
 .MACRO	ADCDY	addr
-	ADC	addr,Y
+	ADC	(addr),Y
 .ENDMACRO
 
 .MACRO	JMPD	addr

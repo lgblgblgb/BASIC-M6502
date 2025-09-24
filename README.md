@@ -14,6 +14,8 @@ the source, what I try is to be able to be assembled with a modern assembler
 possible. Clearly, there is room to make it much more clear at many-many
 places, but it's not on my radar (yet).
 
+Also, I have some experimental simulation stuff included to run the ROM.
+
 TL;DR what you want to check out here is `m6502-converted.asm`, but first:
 
 ## WARNING
@@ -61,6 +63,10 @@ by implementing a simulator; not for PDP-10 though, but in Python. It uses
 py65emu, which you can install with `pip` (probably you need `pip3`):
 
     pip3 install py65emu
+
+Also you need SDL2 bindings:
+
+    pip3 install PySDL2
 
 After that, you can use the "simulate" target in the `Makefile`:
 

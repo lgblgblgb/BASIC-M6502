@@ -15,25 +15,37 @@ import base64
 from collections import deque
 
 
+
+ALLOW_DEBUG = False
+
+
 class Console(object):
 
     init_done = False
     COLS, ROWS = 80, 25
-    FONT_W, FONT_H = 8, 16
+    FONT_W, FONT_H = 9, 16      # FONT_W = 9 -> leave an empty pixel after a 8-width font
     WIDTH, HEIGHT = COLS * FONT_W, ROWS * FONT_H
     KBD_BUFFER_SIZE = 16
     CURSOR_CODE = 219
-    #COLOUR = (0, 255, 100)      # BRIGHT GREEN
-    #COLOUR = (0x00, 0xFF, 0x00)  # GREEN
-    COLOUR = (255, 191, 0)  # AMBER
+    COLOUR = (
+        (0, 255, 100),      # 0: BRIGHT GREEN
+        (0x00, 0xFF, 0x00), # 1: GREEN
+        (255, 191, 0)       # 2: AMBER
+    )
+    COLOUR_SCHEME = 2
+    BG_DIM_FACTOR = 0.1
+    WIN_ZOOM = 1.5
 
     def __init__(self, title_str):
 
-        sdl2.ext.init()
-        self.window = sdl2.ext.Window(title_str, size=(self.WIDTH, self.HEIGHT))
-        self.window.show()
+        sdl2.ext.init(sdl2.SDL_INIT_VIDEO)
+        self.window = sdl2.ext.Window(title_str, size = (int(self.WIDTH * self.WIN_ZOOM), int(self.HEIGHT * self.WIN_ZOOM)))
         self.renderer = sdl2.ext.Renderer(self.window)
-        self.screen = [[" "]*self.COLS for _ in range(self.ROWS)]
+        sdl2.SDL_SetHint(sdl2.SDL_HINT_RENDER_SCALE_QUALITY, b"1")
+        sdl2.SDL_RenderSetLogicalSize(self.renderer.sdlrenderer, self.WIDTH, self.HEIGHT)
+        self.window.show()
+        self.COLOUR = self.COLOUR[self.COLOUR_SCHEME]
+        self.screen = [[" "] * self.COLS for _ in range(self.ROWS)]
         self.font_tex = self._get_font()
         self.x = 0
         self.y = 0
@@ -77,6 +89,7 @@ class Console(object):
 
     def _get_font(self):
 
+        t0 = sdl2.SDL_GetTicks()
         # THIS "SUSPECT" PART: base85 encoded VGA font, so it won't take too much space here ...
         font = r"""zzzz!!%J!V1F32R=Tp<z!!%KJg].;kkPtR2zzD#XG5rd6[:zz&3,(:HoMZ;z!!!!94?Vfik85$uz!!!!94F[>1IM`nazz!!!iu4;\%uzs8W-!s8V9"_rq("s8W-!z!'Fj[6=r=[zs8W-!s218<]pZe<s8W-!!!"&M)DZQ]bfn:Uz!!#,nAnGX;(k*;
         =z!!#5>5;4cF0Q?O>z!!%LYIq)tu@qXue^]4?7!!!!9(u%194PL\iz!._lCnG*"XnDM*4z!!3?7*^9Qe*Y&AUz!!!iuIM`n=IQSGIz!!$VCAnGXeAcQFTz!!%N'gY7&o)]K_8z!.;do3,HUSCcDjCHiO-Hzzrr2orz!!!iuIM`n=IQSHrz!!!iuIM`n=(`4),z!!!iQ
@@ -100,34 +113,34 @@ class Console(object):
         z(`37%!#QOQzz!-[,tG2*&tz!'"e22uipYzzz!!!!9(]XO9zzz(]XO9z!"TJH$k*R2Chu3Rz!8)+(Ci!nfzz!-$RE@*&*CzzzI!g<hI!g;Azzzzz"""
         font = base64.a85decode(font)
         assert len(font) == 256 * self.FONT_H
-        assert self.FONT_W == 8
+        assert self.FONT_W in (8, 9)
         surface = sdl2.SDL_CreateRGBSurface(0, self.FONT_W * 256, self.FONT_H, 32, 0, 0, 0, 0)
         fg = sdl2.SDL_MapRGBA(surface.contents.format, self.COLOUR[0], self.COLOUR[1], self.COLOUR[2], 0xFF)
-        bg = sdl2.SDL_MapRGBA(surface.contents.format, 0x00, 0x00, 0x00, 0xFF)
+        BG_COLOUR = tuple(int(c * self.BG_DIM_FACTOR) for c in self.COLOUR)
+        bg = sdl2.SDL_MapRGBA(surface.contents.format, BG_COLOUR[0], BG_COLOUR[1], BG_COLOUR[2], 0xFF)
         sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(0, 0, self.WIDTH, self.HEIGHT)), bg)
         for i in range(256):
             for y in range(self.FONT_H):
                 line = font[i * self.FONT_H + y]
                 for x in range(self.FONT_W):
-                    if line & (1 << (7 - x)):
+                    if x < 7 and line & (1 << (7 - x)):
                         px = i*self.FONT_W + x
                         # Yeah, horrible trick. However the "font sheet" (texture) is done only once at startup
                         sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(px, y, 1, 1)), fg)
+        del font
         texture = sdl2.SDL_CreateTextureFromSurface(self.renderer.renderer, surface)
         sdl2.SDL_FreeSurface(surface)
+        print("Font texture prepared within {} msecs for a {}x{} font.".format(sdl2.SDL_GetTicks() - t0, self.FONT_W, self.FONT_H))
         return texture
 
     def render(self):
 
-        phase = (sdl2.SDL_GetTicks() & 512) and self.cursor_on
+        cursor_phase = (sdl2.SDL_GetTicks() & 512) and self.cursor_on
         self.renderer.clear(sdl2.ext.Color(0, 0, 0))
         for y in range(self.ROWS):
             for x in range(self.COLS):
-                if x == self.x and y == self.y and phase:
-                    idx = self.CURSOR_CODE
-                else:
-                    idx = ord(self.screen[y][x])
-                src = sdl2.SDL_Rect(idx * self.FONT_W, 0, self.FONT_W, self.FONT_H)
+                asc = self.CURSOR_CODE if x == self.x and y == self.y and cursor_phase else ord(self.screen[y][x])
+                src = sdl2.SDL_Rect(asc * self.FONT_W, 0, self.FONT_W, self.FONT_H)
                 dst = sdl2.SDL_Rect(x * self.FONT_W, y * self.FONT_H, self.FONT_W, self.FONT_H)
                 sdl2.SDL_RenderCopy(self.renderer.renderer, self.font_tex, src, dst)
         self.renderer.present()
@@ -136,14 +149,15 @@ class Console(object):
 
         if len(self.kbdbuf) < self.kbdbuf.maxlen:
             self.kbdbuf.append(c)
+            print("KBD: buffer size is: {}".format(len(self.kbdbuf)))
         else:
-            print("WARNING: keyboard buffer is full!")
+            print("KBD: WARNING: keyboard buffer is full!")
         #self.putstring(chr(c))
 
     def read_keyboard(self):
 
         if self.kbdbuf:
-            return self.kbdbuf.popleft()
+            return self.kbdbuf.popleft() & 0x7F
         return 0
 
     def handle_events(self):
@@ -176,13 +190,12 @@ lastdebug = "x"
 
 def DEBUG(s):
     global lastdebug
-    return
-    print(s)
-    if cpu.r.pc in lst:
-        if lastdebug != lst[cpu.r.pc]:
-            lastdebug = lst[cpu.r.pc]
-            print(lst[cpu.r.pc])
-    pass
+    if ALLOW_DEBUG:
+        print(s)
+        if cpu.r.pc in lst:
+            if lastdebug != lst[cpu.r.pc]:
+                lastdebug = lst[cpu.r.pc]
+                print(lst[cpu.r.pc])
 
 
 class MyIO(object):
@@ -269,66 +282,56 @@ def load_lst(fn):
     return db
 
 
+def run(arg):
+    global cpu, con, mem, mmu, io
+    if len(arg) != 2:
+        raise RuntimeError("Bad usage.")
+    lst = load_lst(arg[1])
+    with open(arg[0], "rb") as rom:
+        rom = rom.read()
+    ID = b'{{CUT#HERE}}'
+    pos = rom.find(ID)
+    if pos < 0:
+        raise RuntimeError("Cannot find ID in the binary")
+    loc  = rom[pos + len(ID) + 0] + (rom[pos + len(ID) + 1] * 256)
+    init = rom[pos + len(ID) + 2] + (rom[pos + len(ID) + 3] * 256)
+    IO_PAGE_ADDR = rom[pos + len(ID) + 4] + (rom[pos + len(ID) + 5] * 256)
+    realio = rom[pos + len(ID) + 6]
+    rest = pos + len(ID) + 7
+    print(f"Position={pos} ROMLOC={loc:04X} INIT={init:04X} REALIO={realio} IO_PAGE_ADDR=${IO_PAGE_ADDR:04X}")
+    if realio != 0:
+        raise RuntimeError("Need SIMULATE target to set up in the source, ie REALIO must be 0")
+    rom = rom[rest:]
+    rom = rom.rstrip(b'\x00')
+    mem = bytearray(0x10000)
+    mem[loc:loc+len(rom)] = rom         # replace the memory content at "ROM"
+    mem[0xFFFC] = init & 0xFF
+    mem[0xFFFD] = init >> 8
+    mem[IO_PAGE_ADDR + 0] = 0xAD       # LDA abs opcode
+    mem[IO_PAGE_ADDR + 1] = 0x00
+    mem[IO_PAGE_ADDR + 2] = 0xD0
+    mem[IO_PAGE_ADDR + 3] = 0x60       # RTS
+    io = MyIO()
+    mmu = MyMMU(mem, loc, loc + len(rom) - 1, init, IO_PAGE_ADDR, io)
+    cpu = CPU(mmu)
+    cpu.reset()
+    con = Console("MBASIC-6502 SIMULATOR")
+    con.putstring(f"SIMULATION: ROM=${loc:04X}-${loc+len(rom)-1:04X} INIT=${init:04X} IO=${IO_PAGE_ADDR:04X}\r\n")
+    running = True
+    t0, t1, ops = sdl2.SDL_GetTicks(), 0, 0
+    while running:
+        cpu.step()
+        ops += 1
+        t2 = sdl2.SDL_GetTicks()
+        if t2 - t1 >= 1000 // 25:
+            t1 = t2
+            running = con.handle_events()
+            con.render()
+    t0 = (sdl2.SDL_GetTicks() - t0) / 1000
+    del con
+    print(f"Running for {t0} seconds, {int(ops/t0)} ops/sec")
 
 
-
-
-
-
-
-if len(sys.argv) != 3:
-    raise RuntimeError("Bad usage.")
-lst = load_lst(sys.argv[2])
-with open(sys.argv[1], "rb") as rom:
-    rom = rom.read()
-ID = b'{{CUT#HERE}}'
-pos = rom.find(ID)
-if pos < 0:
-    raise RuntimeError("Cannot find ID in the binary")
-loc  = rom[pos + len(ID) + 0] + (rom[pos + len(ID) + 1] * 256)
-init = rom[pos + len(ID) + 2] + (rom[pos + len(ID) + 3] * 256)
-IO_PAGE_ADDR = rom[pos + len(ID) + 4] + (rom[pos + len(ID) + 5] * 256)
-realio = rom[pos + len(ID) + 6]
-rest = pos + len(ID) + 7
-print(f"Position={pos} ROMLOC={loc:04X} INIT={init:04X} REALIO={realio} IO_PAGE_ADDR=${IO_PAGE_ADDR:04X}")
-
-if realio != 0:
-    raise RuntimeError("Need SIMULATE target to set up in the source!")
-
-rom = rom[rest:]
-rom = rom.rstrip(b'\x00')
-
-
-
-mem = bytearray(0x10000)
-mem[loc:loc+len(rom)] = rom         # replace the memory content at "ROM"
-mem[0xFFFC] = init & 0xFF
-mem[0xFFFD] = init >> 8
-
-
-mem[IO_PAGE_ADDR + 0] = 0xAD       # LDA abs opcode
-mem[IO_PAGE_ADDR + 1] = 0x00
-mem[IO_PAGE_ADDR + 2] = 0xD0
-mem[IO_PAGE_ADDR + 3] = 0x60       # RTS
-
-io = MyIO()
-mmu = MyMMU(mem, loc, loc + len(rom) - 1, init, IO_PAGE_ADDR, io)
-cpu = CPU(mmu)
-
-cpu.reset()
-
-con = Console("MBASIC-6502 SIMULATOR")
-
-running = True
-t1 = sdl2.SDL_GetTicks()
-
-while running:
-
-    cpu.step()
-    t2 = sdl2.SDL_GetTicks()
-    if t2 - t1 >= 1000 // 25:
-        t1 = t2
-        running = con.handle_events()
-        con.render()
-
-sys.exit(0)
+if __name__ == "__main__":
+    run(sys.argv[1:])
+    sys.exit(0)

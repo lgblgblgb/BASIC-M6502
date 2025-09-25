@@ -7,6 +7,7 @@
 *.inc linguist-language=Assembly
 *.a65 linguist-language=Assembly
 *.i65 linguist-language=Assembly
+*.lst linguist-language=Assembly
 Makefile.* linguist-language=Makefile
 Makefile linguist-language=Makefile
 *.py linguist-language=Python

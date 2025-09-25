@@ -72,6 +72,14 @@ After that, you can use the "simulate" target in the `Makefile`:
 
     make simulator
 
+Notes:
+
+* I call it "simulator" or "simulation" not "emulator". This is because the
+original jargon used by the MS asm source.
+* Since it's written in Python, it's quite slow ... It's not intended to be
+a good general purpose emulator (oops, simulator ...), just to catch problems
+with my conversion.
+
 ## In-depth details about the conversion and the original assembly source
 
 My findings and guess-work on the assembler and assembly syntax used

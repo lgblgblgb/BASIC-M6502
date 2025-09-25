@@ -12,6 +12,7 @@ import sdl2
 import sdl2.ext
 import ctypes
 import base64
+import re
 from collections import deque
 
 
@@ -34,7 +35,8 @@ class Console(object):
     )
     COLOUR_SCHEME = 2
     BG_DIM_FACTOR = 0.1
-    WIN_ZOOM = 1.5
+    WIN_ZOOM = 1
+    CAPITALIZE_INPUT = True
 
     def __init__(self, title_str):
 
@@ -52,7 +54,9 @@ class Console(object):
         self.cursor_on = True
         self.event = sdl2.SDL_Event()
         self.kbdbuf = deque(maxlen = self.KBD_BUFFER_SIZE)
+        self.input_line_ready = False
         self.init_done = True
+        print(f"Console prepared for {self.COLS}x{self.ROWS} text resolution")
 
     def __del__(self):
 
@@ -64,11 +68,22 @@ class Console(object):
 
     def putchar(self, c):
 
+        if not isinstance(c, str) or len(c) != 1:
+            raise RuntimeError("putchar must be called with 1-byte long character-string")
         if c == '\r':
             self.x = 0
         elif c == '\n':
             self.y += 1
-        elif ord(c) >= 32:
+        elif ord(c) == 8:
+            if self.x > 0:
+                self.x -= 1
+                self.screen[self.y][self.x] = ' '
+        elif ord(c) < 32:
+            self.putchar(chr(ord('^')))
+            c = chr(ord('A') + ord(c))
+        elif ord(c) >= 127:
+            c = '?'
+        if ord(c) >= 32:
             self.screen[self.y][self.x] = c
             self.x += 1
         if self.x >= self.COLS:
@@ -76,10 +91,9 @@ class Console(object):
             self.x = 0
         if self.y >= self.ROWS:
             self.y = self.ROWS - 1
-            for y in range(self.ROWS - 1):
-                for x in range(self.COLS):
-                    self.screen[y][x] = self.screen[y + 1][x]
             for x in range(self.COLS):
+                for y in range(self.ROWS - 1):
+                    self.screen[y][x] = self.screen[y + 1][x]
                 self.screen[self.ROWS - 1][x] = ' '
 
     def putstring(self, s):
@@ -124,9 +138,8 @@ class Console(object):
                 line = font[i * self.FONT_H + y]
                 for x in range(self.FONT_W):
                     if x < 7 and line & (1 << (7 - x)):
-                        px = i*self.FONT_W + x
                         # Yeah, horrible trick. However the "font sheet" (texture) is done only once at startup
-                        sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(px, y, 1, 1)), fg)
+                        sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(i * self.FONT_W + x, y, 1, 1)), fg)
         del font
         texture = sdl2.SDL_CreateTextureFromSurface(self.renderer.renderer, surface)
         sdl2.SDL_FreeSurface(surface)
@@ -147,18 +160,40 @@ class Console(object):
 
     def _push_input(self, c):
 
+        if c == 8:
+            if len(self.kbdbuf) > 0:
+                self.kbdbuf.popleft()
+                self.putchar(chr(8))
+            return
         if len(self.kbdbuf) < self.kbdbuf.maxlen:
             self.kbdbuf.append(c)
             print("KBD: buffer size is: {}".format(len(self.kbdbuf)))
+            if c == 13:
+                self.input_line_ready = True
         else:
             print("KBD: WARNING: keyboard buffer is full!")
-        #self.putstring(chr(c))
+        if c == 13:
+            self.putstring("\r\n")
+        else:
+            if self.CAPITALIZE_INPUT and c >= ord('a') and c <= ord('z'):
+                c = c - ord('a') + ord('A')
+            self.putchar(chr(c))
 
     def read_keyboard(self):
 
         if self.kbdbuf:
-            return self.kbdbuf.popleft() & 0x7F
+            value = self.kbdbuf.popleft()
+            if len(self.kbdbuf) == 0:
+                self.input_line_ready = False
+            return value & 0x7F
         return 0
+
+    def read_keyboard_line(self):
+
+        if self.input_line_ready:
+            return self.read_keyboard()
+        else:
+            return 0
 
     def handle_events(self):
 
@@ -173,6 +208,8 @@ class Console(object):
                     print("F1 pressed!")
                 elif sym == sdl2.SDLK_RETURN:
                     self._push_input(13)
+                elif sym == sdl2.SDLK_BACKSPACE:
+                    self._push_input(8)
             elif self.event.type == sdl2.SDL_TEXTINPUT:
                 text = self.event.text.text.decode("utf-8")
                 for ch in text:
@@ -181,7 +218,12 @@ class Console(object):
         return True
 
 
+def get_last_jsr_return_addr():
 
+    lo = mem[0x100 + ((cpu.r.s + 1) & 0xFF)]
+    hi = mem[0x100 + ((cpu.r.s + 2) & 0xFF)]
+    return_addr = (hi << 8) | lo
+    return (return_addr + 1) & 0xFFFF   # JSR pushes ret-1 ...
 
 
 
@@ -189,18 +231,24 @@ lastdebug = "x"
 
 
 def DEBUG(s):
-    global lastdebug
+    global lastdebug, lst, sym
     if ALLOW_DEBUG:
         print(s)
         if cpu.r.pc in lst:
             if lastdebug != lst[cpu.r.pc]:
                 lastdebug = lst[cpu.r.pc]
-                print(lst[cpu.r.pc])
+                if cpu.r.pc in sym:
+                    s = " [{}]".format(sym[cpu.r.pc])
+                else:
+                    s = ""
+                print(lst[cpu.r.pc] + s)
 
 
 class MyIO(object):
     def read(self, addr):
         if addr == 0:
+            ret = get_last_jsr_return_addr()
+            print(f"IO: reading console at PC=${cpu.r.pc:04X} caller on stack is ${ret:04X}")
             return con.read_keyboard()
         return 0xFF
     def write(self, addr, value):
@@ -263,7 +311,7 @@ class MyMMU(object):
 
 
 def load_lst(fn):
-    db = {}
+    db, sym = {}, {}
     with open(fn, "rt") as f:
         for line in f:
             line = line.strip()
@@ -276,17 +324,20 @@ def load_lst(fn):
                 addr = int(sep[0], 16)
             except ValueError:
                 continue
-            if line[11] not in ("0123456789ABCDEF"):
-                continue
-            db[addr] = line
-    return db
+            if line[11] in ("0123456789ABCDEF"):
+                db[addr] = line
+            if len(line) > 24:
+                r = re.sub(r"^([A-Z][A-Z0-9]*):.*$", r"\1", line[24:])
+                if r != line[24:] and len(r) > 0:
+                    sym[addr] = r
+    return db, sym
 
 
 def run(arg):
-    global cpu, con, mem, mmu, io
+    global cpu, con, mem, mmu, io, lst, sym
     if len(arg) != 2:
         raise RuntimeError("Bad usage.")
-    lst = load_lst(arg[1])
+    lst, sym = load_lst(arg[1])
     with open(arg[0], "rb") as rom:
         rom = rom.read()
     ID = b'{{CUT#HERE}}'
@@ -329,7 +380,7 @@ def run(arg):
             con.render()
     t0 = (sdl2.SDL_GetTicks() - t0) / 1000
     del con
-    print(f"Running for {t0} seconds, {int(ops/t0)} ops/sec")
+    print(f"UPTIME: {t0} sec, {int(ops/t0)} ops/sec")
 
 
 if __name__ == "__main__":

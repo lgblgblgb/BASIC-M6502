@@ -86,12 +86,12 @@ that extra "pack". This would also explain why there are some odd choices,
 like these examples:
 
 * `LDAI  0` instead of `LDA #0`
-* `LDADY addr` instad of `LDA addr,Y`
+* `LDADY addr` instad of `LDA (addr),Y`
 
 These kind of solution were needed (IMHO), because MACRO-10 wouldn't accept
-`#` in a sane way as macro parameter, also `,Y` in the second example would
-be considered as an extra parameter to the `LDA` macro. So it seems, any
-"standard" 6502 assembly syntax which had things like `#`, `,` as part of
+`#` in a sane way as macro parameter, also `(`,`)` in the second example would
+be considered as an illegal syntax in MACRO-10 (probably). So it seems, any
+"standard" 6502 assembly syntax which had things like `#`, `(`, `)` as part of
 the syntax had to be solved differently.
 
 How do I know it was MACRO-10? I cannot know for sure, just guessing. After

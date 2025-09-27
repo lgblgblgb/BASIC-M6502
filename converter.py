@@ -42,6 +42,7 @@ def convert_numbers(match):
                 if radix < 10 and value < radix:
                     hx = False
             except ValueError:
+                conv_errors.append(f"Error converting {s} according to radix {radix} defaulting to radix 10")
                 value = int(s, 10)
                 hx = False
                 conv_errors.append(s)
@@ -66,6 +67,13 @@ emithelper = """
 .INCLUDE "macros.inc"
 """
 
+
+
+pattern = re.compile(r"""
+    (?<![A-Z0-9_])       # not immediately after a letter/digit/underscore, eg digits in labels won't match
+    (\^?[DO]?\d+)        # the number, with optional ^D or ^O prefix (^H is not used by M6502)
+    (?![A-Z0-9_])        # not immediately followed by a letter/digit/underscore
+""", re.VERBOSE | re.IGNORECASE)
 
 
 
@@ -114,11 +122,17 @@ with open(sys.argv[1]) as f:
         main = re.sub(r'([\t ]#.*)"(.+)"(.*)$', r"\1'\2'\3", main)
 
 
-        #main = re.sub(r'\^O([0-7]+)', convert_numbers, main)
-        #main = re.sub(r'((\^[DO]){0,1}[0-7]+)', convert_numbers, main)
-        #main = re.sub(r'\b(\^[OD])?\d+\b', convert_numbers, main)
-        main = re.sub(r'\^(O|D)([0-7]+)', convert_numbers, main)       # for octal/decimal with prefix
-        main = re.sub(r'\b\d+\b', convert_numbers, main)              # for unprefixed numbers
+        ##main = re.sub(r'\^O([0-7]+)', convert_numbers, main)
+        ##main = re.sub(r'((\^[DO]){0,1}[0-7]+)', convert_numbers, main)
+        ##main = re.sub(r'\b(\^[OD])?\d+\b', convert_numbers, main)
+        #main = re.sub(r'\^(O|D)([0-7]+)', convert_numbers, main)       # for octal/decimal with prefix
+        #main = re.sub(r'\b\d+\b', convert_numbers, main)              # for unprefixed numbers
+
+        main = pattern.sub(convert_numbers, main)
+        if len(conv_errors):
+            print(";LGB NUM CONV ERROR: {}".format(" - ".join(conv_errors)))
+            conv_errors = []
+
 
         main = re.sub(r"(^[\t ]*)([0-9]|[$][0-9A-F])", r".BYTE\t\2", main)
         main = re.sub(r":([\t ]*)([0-9]|[$][0-9A-F])", r":\1.BYTE \2", main)
@@ -149,9 +163,3 @@ with open(sys.argv[1]) as f:
         print(line2)
         #if extra:
         #    print(extra)
-
-print("; --- CONV ERRORS ---\n; " + "\n; ".join(conv_errors))
-
-
-
-

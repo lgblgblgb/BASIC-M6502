@@ -5428,7 +5428,7 @@ Current file: m6502-converted.asm
 00350F  1  D0 04        	BNE	FADD1
 003511  1  A0 00        FADDA:	LDY	#0
 003513  1  84 BF        	STY	FACOV
-003515  1  C9 A7        FADD1:	CMP	#$AE-7		;FOR SPEED AND NECESSITY.  GETS
+003515  1  C9 F9        FADD1:	CMP	#256-7		;FOR SPEED AND NECESSITY.  GETS
 003517  1               				;MOST LIKELY CASE TO SHIFTR FASTEST
 003517  1               				;AND ALLOWS SHIFTING OF NEG NUMS
 003517  1               				;BY "QINT".
@@ -5911,7 +5911,7 @@ Current file: m6502-converted.asm
 00379C  1  20 35 37     	JSR	MULDIV		;FIX UP EXPONENTS.
 00379F  1  E6 B0        	INC	FACEXP		;SCALE IT RIGHT.
 0037A1  1  F0 BA        	BEQ	GOOVER		;OVERFLOW.
-0037A3  1  A2 AA        	LDX	#$AE-3-ADDPRC	;SETUP PROCEDURE.
+0037A3  1  A2 FC        	LDX	#256-3-ADDPRC	;SETUP PROCEDURE.
 0037A5  1  A9 01        	LDA	#1
 0037A7  1               DIVIDE:				;THIS IS THE BEST CODE IN THE WHOLE PILE.
 0037A7  1  A4 B9        	LDY	ARGHO		;SEE WHAT RELATION HOLDS.
@@ -6164,6 +6164,7 @@ Current file: m6502-converted.asm
 003919  1  A5 B0        QINT:	LDA	FACEXP
 00391B  1  F0 4A        	BEQ	CLRFAC		;IF ZERO, GOT IT.
 00391D  1  38           	SEC
+00391E  1               ;LGB NUM CONV ERROR: Error converting 8 according to radix 8 defaulting to radix 10 - 8
 00391E  1  E9 A0        	SBC	#8*ADDPRC+$98	;GET NUMBER OF PLACES TO SHIFT.
 003920  1  24 B5        	BIT	FACSGN
 003922  1  10 09        	BPL	QISHFT
@@ -6173,7 +6174,7 @@ Current file: m6502-converted.asm
 003929  1  20 CB 35     	JSR	NEGFCH		;TRULY NEGATE QUANTITY IN FAC.
 00392C  1  8A           	TXA
 00392D  1  A2 B0        QISHFT: LDX	#FAC
-00392F  1  C9 A7        	CMP	#$AE-7
+00392F  1  C9 F9        	CMP	#256-7
 003931  1  10 06        	BPL	QINT1		;IF NUMBER OF PLACES .GE. 7
 003933  1               				;SHIFT 1 PLACE AT A TIME.
 003933  1  20 17 36     	JSR	SHIFTR		;START SHIFTING BYTES, THEN BITS.
@@ -6191,6 +6192,7 @@ Current file: m6502-converted.asm
 00394A  1               
 00394A  1               	;GREATEST INTEGER FUNCTION.
 00394A  1  A5 B0        INT:	LDA	FACEXP
+00394C  1               ;LGB NUM CONV ERROR: Error converting 8 according to radix 8 defaulting to radix 10 - 8
 00394C  1  C9 A0        	CMP	#8*ADDPRC+$98
 00394E  1  B0 20        	BCS	INTRTS		;FORGET IT.
 003950  1  20 19 39     	JSR	QINT
@@ -6199,6 +6201,7 @@ Current file: m6502-converted.asm
 003957  1  84 B5        	STY	FACSGN		;MAKE FAC LOOK POSITIVE.
 003959  1  49 80        	EOR	#$80		;GET COMPLEMENT OF SIGN IN CARRY.
 00395B  1  2A           	ROL	A
+00395C  1               ;LGB NUM CONV ERROR: Error converting 8 according to radix 8 defaulting to radix 10 - 8
 00395C  1  A9 A0        	LDA	#8*ADDPRC+$98
 00395E  1  85 B0        	STA	FACEXP
 003960  1  A5 B4        	LDA	FACLO
@@ -6392,7 +6395,7 @@ Current file: m6502-converted.asm
 003A7C  1  B0 09        	BCS	FOUT7
 003A7E  1  A9 3B A0 3A  FOUT37: LDWDI	NZMIL		;MULTIPLY BY 10^6.
 003A82  1  20 A6 36     	JSR	FMULT
-003A85  1  A9 A5        	LDA	#$AE-3*ADDPRC-6
+003A85  1  A9 F7        	LDA	#256-3*ADDPRC-6
 003A87  1  85 AC        FOUT7:	STA	DECCNT		;SAVE COUNT OR ZERO IT.
 003A89  1  A9 36 A0 3A  FOUT4:	LDWDI	NZ9999
 003A8D  1  20 D9 38     	JSR	FCOMP		;IS NUMBER .GT. 999999.499 ?
@@ -7602,8 +7605,4 @@ Current file: m6502-converted.asm
 007594  1               .OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
 007594  1               
 007594  1               
-007594  1               ; --- CONV ERRORS ---
-007594  1               ; 8
-007594  1               ; 8
-007594  1               ; 8
 007594  1               

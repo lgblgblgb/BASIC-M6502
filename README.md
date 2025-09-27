@@ -49,7 +49,7 @@ Simply say `make`, if all the needed tools are installed. What you need:
 
 * standard UNIX or UNIX-like environment, with the usual common tools/utilities
 * `CC65` suite installed (including `CA65` assembler and it's `CL65` frontend)
-* `Python3` for the converter utility
+* `Python3` for the converter and cutter utilities
 * GNU `make` (probably BSD make would work as well, I am not sure)
 
 If needed, `Makefile` can be customized.
@@ -64,7 +64,7 @@ py65emu, which you can install with `pip` (probably you need `pip3`):
 
     pip3 install py65emu
 
-Also you need SDL2 bindings:
+Also you need SDL2 python3 bindings:
 
     pip3 install PySDL2
 
@@ -78,7 +78,8 @@ Notes:
 original jargon used by the MS asm source.
 * Since it's written in Python, it's quite slow ... It's not intended to be
 a good general purpose emulator (oops, simulator ...), just to catch problems
-with my conversion.
+with my conversion. On my "good enough" notebook it tops about 0.25MHz clock.
+* Press F9 to exit (or close the window).
 
 ## In-depth details about the conversion and the original assembly source
 

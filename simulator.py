@@ -18,6 +18,7 @@ from collections import deque
 
 
 ALLOW_DEBUG = False
+ALLOW_DEBUG_READING_CONSOLE = False
 
 
 class Console(object):
@@ -37,14 +38,18 @@ class Console(object):
     BG_DIM_FACTOR = 0.1
     WIN_ZOOM = 1
     CAPITALIZE_INPUT = True
+    FONT_FILE = "bin/vgafont16h.bin"
 
     def __init__(self, title_str):
 
         sdl2.ext.init(sdl2.SDL_INIT_VIDEO)
         self.window = sdl2.ext.Window(title_str, size = (int(self.WIDTH * self.WIN_ZOOM), int(self.HEIGHT * self.WIN_ZOOM)))
         self.renderer = sdl2.ext.Renderer(self.window)
-        sdl2.SDL_SetHint(sdl2.SDL_HINT_RENDER_SCALE_QUALITY, b"1")
-        sdl2.SDL_RenderSetLogicalSize(self.renderer.sdlrenderer, self.WIDTH, self.HEIGHT)
+        if self.WIN_ZOOM != 1:
+            sdl2.SDL_SetHint(sdl2.SDL_HINT_RENDER_SCALE_QUALITY, b"1")
+            sdl2.SDL_RenderSetLogicalSize(self.renderer.sdlrenderer, self.WIDTH, self.HEIGHT)
+        else:
+            sdl2.SDL_SetHint(sdl2.SDL_HINT_RENDER_SCALE_QUALITY, b"0")
         self.window.show()
         self.COLOUR = self.COLOUR[self.COLOUR_SCHEME]
         self.screen = [[" "] * self.COLS for _ in range(self.ROWS)]
@@ -103,31 +108,11 @@ class Console(object):
 
     def _get_font(self):
 
-        t0 = sdl2.SDL_GetTicks()
-        # THIS "SUSPECT" PART: base85 encoded VGA font, so it won't take too much space here ...
-        font = r"""zzzz!!%J!V1F32R=Tp<z!!%KJg].;kkPtR2zzD#XG5rd6[:zz&3,(:HoMZ;z!!!!94?Vfik85$uz!!!!94F[>1IM`nazz!!!iu4;\%uzs8W-!s8V9"_rq("s8W-!z!'Fj[6=r=[zs8W-!s218<]pZe<s8W-!!!"&M)DZQ]bfn:Uz!!#,nAnGX;(k*;
-        =z!!#5>5;4cF0Q?O>z!!%LYIq)tu@qXue^]4?7!!!!9(u%194PL\iz!._lCnG*"XnDM*4z!!3?7*^9Qe*Y&AUz!!!iuIM`n=IQSGIz!!$VCAnGXeAcQFTz!!%N'gY7&o)]K_8z!.;do3,HUSCcDjCHiO-Hzzrr2orz!!!iuIM`n=IQSHrz!!!iuIM`n=(`4),z!!!iQ
-        (`4),(k+Razz!#Q.D$lAsEzz!&.g[?n_Q\zz!!'gM_#=<6zz!$l1VAg@?Vzz&3)XsI/a*Fzzrr.:m3&hHLzzzzz!!!iu4?OGt(]YBiz!+ohT,QIfEzz!!!"8D#S6eD#S6ez(`7Y?_SCO'#):-F(`35Qz_T!!$0OVnTz!!"upCcHUnbfn:Sz!&-)\?iU0,zz!!!EE0JG
-        170JF=Pz!!"\i$k*OQ$k*t,zz!+n@n4D"Qnzz!#QQ%(`35Qzzz!#QOi0E;(Qz!!!#uzzzz!!!iQzz!X9&M0OV\Hz!!#,n_o(6`_o$(Kz!!!iqGSh87(`4*=z!!%Dd"q2>&@)0e]z!!%Dd"pR0o"pW(pz!!!EI4D`7@$k*Ocz!!*#6^qfjP"pW(pz!!"ud^qflf`l?#G
-        z!!*#<"pPJQ0JG17z!!%Dd`l<DG`l?#Gz!!%Dd`l<H3"pPK\zz(`35Q!#QOQzz(`35Q!#QP,z!!!!'$lC[+0Gk3&zz!.FnJIK0?Jz!!!",0Gk3&$lC[+z!!%Dd`XE\$(]YBiz!!!"H`l?llhV>noz!!!QiCrXKo`l?$<z!!)q/AnHF&AnGZQz!!#,n_SEt&^qs\Gz!!
-        )e1AnGXeAnGlSz!!*"1@VC""?t*aIz!!*"1@VC""?smC3z!!#,n_SEtD`l;UOz!!($Y`lA"t`l?$<z!!#+u(`4),(`4)Pz!!"&K$k*OQbfn:Uz!!).nAo)^:Ch@;Az!!)Lr?smAM?t*aIz!!'q"s8Uik_o'C0z!!(%$pAWpo`l?$<z!!%Dd`l?$<`l?#Gz!!)q/AnHE
-        u?smC3z!!%Dd`l?$<`n'!o$k<7;!!)q/AnHF,AnGZ;z!!%Dd`aCb7#0+Z1z!!*&RR2?bX(`4)Pz!!($Y`l?$<`l?#Gz!!'pS_o'C0_e)"Jz!!'pS_o'CHg](ktz!!'pSAipnI4D)LKz!!'pS_e)"J(`4)Pz!!*&:L("nQ@)9b\z!!#,80JG170JG1Cz!!!"L^u0/k*"
-        E/Sz!!#+i$k*OQ$k*P,z&3+LGzzzzzz!<3$!0JF=Dzzzz!-ep"bfn:Sz!!(qb@!HL"AnGY&zz!.;f%^qds;z!!!uI$p8@Mbfn:Szz!.;fc^qds;z!!"upA74n7?smC3zz!-ZT1bfn:Y%*Wqr!!(qb?u1!uAnGZ;z!!!iQ!&tf4(`4)Pz!!!3-!"K2;"pP89AnF.*!!(
-        qb?tO5"G\h!Sz!!"tq(`4),(`4)Pzz!9X=9gY:K;zz!8M0uAnGXezz!.;f+`l?#Gzz!8M0uAnGY&?srI(z!-ZT1bfn:Y$k+0Wz!8Ma0?smC3zz!.;do3"3fSz!!!Qa0`3UY0JGC)zz!6i[2bfn:Szz!5l^l_e)"Jzz!5l^lgY;a?zz!5iD2(d)EJzz!63$u`l?#I"q:
-        8,z!<11Z0OVp"z!!!KG(`73/(`4)"z!!!iQ(`35i(`4),z!!$sT(`3`"(`4*/z!!%2tzzzz&3+LG`l@uXz!!#,n_SEt&_Ibn=#(-CN!!(4C!6i[2bfn:Sz!"9\u!.;fc^qds;z!"_,+!-ep"bfn:Sz!!(4C!-ep"bfn:Sz!+7Jt!-ep"bfn:Sz!'"dS!-ep"bfn
-        :Szz4D%u/AipJ+49,?]!"_,+!.;fc^qds;z!!("=!.;fc^qds;z!+7Jt!.;fc^qds;z!!$U2!&tf4(`4)Pz!#Rh1!&tf4(`4)Pz!+7Jt!&tf4(`4)Pz!6,!M3,HUSrl2stz3,CPS3,HUSrl2stz(bf=traoPc?smUGzz!,ak;Ib<G"z!!#3!bfp(1bfn;Vz!"_,
-        +!.;f+`l?#Gz!!("=!.;f+`l?#Gz!+7Jt!.;f+`l?#Gz!&/ZA!6i[2bfn:Sz!+7Jt!6i[2bfn:Sz!!("=!63$u`l?#I"q5_V!6,"d`l?$<`l?#Gz!6,#Y`l?$<`l?#Gz!#QQ%_na('_gWF>z!'"e*@.7Q3?sr-pz!!'oK4;e)8rtlRiz!;pG@Ht$]+AnGZHz!"K
-        qb(`7]=(`4),fPgfj!#RCt!-ep"bfn:Sz!"9\u!&tf4(`4)Pz!#RCt!.;f+`l?#Gz!#RCt!6i[2bfn:Sz!!%2t!8M0uAnGXezG2*);k4\f2cGmlDz!'G(64og$3zz!'"e22un=+zz!!"],!&-*7^rFBAzz!!*#6^qd_czz!!*!&"pP83z!5QCe`lo8R@*Y5G$m,
-        HL!5QCe`lo8RB$Q]+"pP&-!!!iQ!#QOi4?P_Czz!&eZGCc27nzz!8)*GCtJ^fz&O[4!&O[4!&O[4!&O[4!<N9'!<N9'!<N9'!<N9'!h07\!h07\!h07\!h07\!(`4),(`4),(`4),(`4),(`4),(`4+b(`4),(`4),(`4),)#+sC(`4),(`4),2E!HO2E!Je2E!
-        HO2E!HOz!!!#u2E!HO2E!HOz!;IE+(`4),(`4),2E!HO2YI@K2E!HO2E!HO2E!HO2E!HO2E!HO2E!HOz!<*2r2E!HO2E!HO2E!HO2YI@Szz2E!HO2E!Jmzz(`4),)#+sCzzz!!!#o(`4),(`4),(`4),(`4)3zz(`4),(`4+izzz!!!$!(`4),(`4),(`4),(`4
-        )3(`4),(`4),z!!!$!zz(`4),(`4+i(`4),(`4),(`4),(`sS:(`4),(`4),2E!HO2E!HP2E!HO2E!HO2E!HO2E*<Szzz!'`.r2E!HO2E!HO2E!HO2YR4Ozzz!<3&n2E!HO2E!HO2E!HO2E*<K2E!HO2E!HOz!<3'!zz2E!HO2YR4G2E!HO2E!HO(`4),)#jU9z
-        z2E!HO2E!Jnzzz!<3'!(`4),(`4),z!!!$!2E!HO2E!HO2E!HO2E!HXzz(`4),(`sS:zzz!$<%"(`4),(`4),z!!!!`2E!HO2E!HO2E!HO2E!Jn2E!HO2E!HO(`4),)#kHQ(`4),(`4),(`4),(`4+bzzz!!!!@(`4),(`4),s8W-!s8W-!s8W-!s8W-!z!!!$!
-        s8W-!s8W-!nF5r:nF5r:nF5r:nF5r:%hB0]%hB0]%hB0]%hB0]s8W-!s8W*!zzz!-[/Mf\"u&z!!%8fbfn_``l?$Bz!!*#<`k]C*^qdb$zzrbQCeCi!p(z!!!#u`aCJ;0OVp"zz!.NSQf\"hqzzAnGXeApduo^]4?7zG2*oO(`4),z!!!"J(d)DBAipoZz!!!!Y
-        CrXKo`l;gSz!!"up`l?#7Ci!qUz!!"&o(^rT?AnGX;zz!.N\WgO9,&z!!!!$#(G=]o6t)_z!!!um?sn@i?skZ.z!!!"H`l?$<`l?$<zzrVurt!!)uuzz(`7]=(]XR9z!!!!Q(^pTW(bbr=z!!!!-(bf>O(^pCnz!!!KJ)]0D/(`4),(`4),(`4),(`4),f\"hqz
-        z(`37%!#QOQzz!-[,tG2*&tz!'"e22uipYzzz!!!!9(]XO9zzz(]XO9z!"TJH$k*R2Chu3Rz!8)+(Ci!nfzz!-$RE@*&*CzzzI!g<hI!g;Azzzzz"""
-        font = base64.a85decode(font)
-        assert len(font) == 256 * self.FONT_H
         assert self.FONT_W in (8, 9)
+        with open(self.FONT_FILE, "rb") as font:
+            font = font.read()
+        assert len(font) == 256 * self.FONT_H
+        t0 = sdl2.SDL_GetTicks()
         surface = sdl2.SDL_CreateRGBSurface(0, self.FONT_W * 256, self.FONT_H, 32, 0, 0, 0, 0)
         fg = sdl2.SDL_MapRGBA(surface.contents.format, self.COLOUR[0], self.COLOUR[1], self.COLOUR[2], 0xFF)
         BG_COLOUR = tuple(int(c * self.BG_DIM_FACTOR) for c in self.COLOUR)
@@ -140,7 +125,6 @@ class Console(object):
                     if x < 7 and line & (1 << (7 - x)):
                         # Yeah, horrible trick. However the "font sheet" (texture) is done only once at startup
                         sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(i * self.FONT_W + x, y, 1, 1)), fg)
-        del font
         texture = sdl2.SDL_CreateTextureFromSurface(self.renderer.renderer, surface)
         sdl2.SDL_FreeSurface(surface)
         print("Font texture prepared within {} msecs for a {}x{} font.".format(sdl2.SDL_GetTicks() - t0, self.FONT_W, self.FONT_H))
@@ -248,7 +232,8 @@ class MyIO(object):
     def read(self, addr):
         if addr == 0:
             ret = get_last_jsr_return_addr()
-            print(f"IO: reading console at PC=${cpu.r.pc:04X} caller on stack is ${ret:04X}")
+            if ALLOW_DEBUG_READING_CONSOLE:
+                print(f"IO: reading console at PC=${cpu.r.pc:04X} caller on stack is ${ret:04X}")
             return con.read_keyboard()
         return 0xFF
     def write(self, addr, value):
@@ -352,16 +337,12 @@ def run(arg):
     print(f"Position={pos} ROMLOC={loc:04X} INIT={init:04X} REALIO={realio} IO_PAGE_ADDR=${IO_PAGE_ADDR:04X}")
     if realio != 0:
         raise RuntimeError("Need SIMULATE target to set up in the source, ie REALIO must be 0")
-    rom = rom[rest:]
+    rom = rom[rest:]                    # "cut out" the real ROM image part of the "uncut" version of "ROM"
     rom = rom.rstrip(b'\x00')
-    mem = bytearray(0x10000)
+    mem = bytearray(0x10000)            # full 64K address space for 6502
     mem[loc:loc+len(rom)] = rom         # replace the memory content at "ROM"
     mem[0xFFFC] = init & 0xFF
     mem[0xFFFD] = init >> 8
-    mem[IO_PAGE_ADDR + 0] = 0xAD       # LDA abs opcode
-    mem[IO_PAGE_ADDR + 1] = 0x00
-    mem[IO_PAGE_ADDR + 2] = 0xD0
-    mem[IO_PAGE_ADDR + 3] = 0x60       # RTS
     io = MyIO()
     mmu = MyMMU(mem, loc, loc + len(rom) - 1, init, IO_PAGE_ADDR, io)
     cpu = CPU(mmu)
@@ -369,10 +350,12 @@ def run(arg):
     con = Console("MBASIC-6502 SIMULATOR")
     con.putstring(f"SIMULATION: ROM=${loc:04X}-${loc+len(rom)-1:04X} INIT=${init:04X} IO=${IO_PAGE_ADDR:04X}\r\n")
     running = True
-    t0, t1, ops = sdl2.SDL_GetTicks(), 0, 0
+    t0, t1, cycles = sdl2.SDL_GetTicks(), 0, 0
     while running:
-        cpu.step()
-        ops += 1
+        # Make "some" CPU steps at once to be faster. It's not critical, calling event handler and renderer is just "cosmetic" and human I/O bound
+        for _ in range(256):
+            cpu.step()
+            cycles += cpu.cc
         t2 = sdl2.SDL_GetTicks()
         if t2 - t1 >= 1000 // 25:
             t1 = t2
@@ -380,7 +363,7 @@ def run(arg):
             con.render()
     t0 = (sdl2.SDL_GetTicks() - t0) / 1000
     del con
-    print(f"UPTIME: {t0} sec, {int(ops/t0)} ops/sec")
+    print(f"UPTIME: {t0} sec, avg eff clock {int(cycles/t0/1000)}KHz")
 
 
 if __name__ == "__main__":

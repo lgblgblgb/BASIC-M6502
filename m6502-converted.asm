@@ -7399,15 +7399,15 @@ FREMES:
 LASTWR:
 	BLOCK	100		;SPACE FOR TEMP STACK.
 .IF	REALIO = 0
-TSTACK:	BLOCK	13600
+;TSTACK:	BLOCK	13600	;LGB: removed, I don't need this at all in my simulator (I assume the PDP-10 based one needed this?)
 .ENDIF
 
+;LGB: removed, I am not sure what it does, PURGE is probably meant to delete macros in MACRO-10?
 ;IF2,<
 ;	PURGE	A,X,Y
 ;>
 ;IFNDEF	START,<START==0>
 ;	END	$Z+START
-
 
 .IF	REALIO = 0
 SIMULATION_TARGET_ROUTINES
@@ -7416,8 +7416,8 @@ SIMULATION_TARGET_ROUTINES
 .OUT .SPRINTF("LGB: ROMLOC=$%04X", ROMLOC)
 .OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
 
-ROMLOC_EXPORTED = ROMLOC	; inserted here, because ROMLOC is not allowed to be exported
-IO_PAGE = IO_START_ADDR
+ROMLOC_EXPORTED = ROMLOC	; inserted here, because ROMLOC is not allowed to be exported (.SET stuff not a constant sym)
+IO_PAGE = IO_START_ADDR		; simulator wants this label name
 .EXPORT IO_PAGE
 .EXPORT ROMLOC_EXPORTED
 .EXPORT REALIO

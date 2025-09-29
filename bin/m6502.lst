@@ -2044,7 +2044,7 @@ Current file: m6502-converted.asm
 00237E  1               	AND	#127
 00237E  1               .ENDIF
 00237E  1               .IF	REALIO = 0
-00237E  1  20 8B 75     	SIM_INSIM		;GET A CHARACTER FROM SIMULATOR
+00237E  1  20 6B 40     	SIM_INSIM		;GET A CHARACTER FROM SIMULATOR
 002381  1               .ENDIF
 002381  1               
 002381  1               .IF	REALIO <> 0
@@ -3362,7 +3362,7 @@ Current file: m6502-converted.asm
 002959  1  24 15        	BIT	INPFLG
 00295B  1               .IF	GETCMD <> 0
 00295B  1  50 0B        	BVC	QDATA
-00295D  1  20 86 75     	JSR	CZGETL		;DON'T WANT INCHR. JUST ONE.
+00295D  1  20 66 40     	JSR	CZGETL		;DON'T WANT INCHR. JUST ONE.
 002960  1               .IF	REALIO-4 = 0
 002960  1               	AND	#127
 002960  1               .ENDIF
@@ -7584,31 +7584,29 @@ Current file: m6502-converted.asm
 004006  1  xx xx xx xx  
 00400A  1  xx xx xx xx  
 004066  1               .IF	REALIO = 0
-004066  1  xx xx xx xx  TSTACK:	BLOCK	13600
-00406A  1  xx xx xx xx  
-00406E  1  xx xx xx xx  
-007586  1               .ENDIF
-007586  1               
-007586  1               ;IF2,<
-007586  1               ;	PURGE	A,X,Y
-007586  1               ;>
-007586  1               ;IFNDEF	START,<START==0>
-007586  1               ;	END	$Z+START
-007586  1               
-007586  1               
-007586  1               .IF	REALIO = 0
-007586  1  AD 00 D0 18  SIMULATION_TARGET_ROUTINES
-00758A  1  60 AD 00 D0  
-00758E  1  C9 00 F0 F9  
-007594  1               .ENDIF
-007594  1               
-007594  1               .OUT .SPRINTF("LGB: ROMLOC=$%04X", ROMLOC)
-007594  1               .OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
-007594  1               
-007594  1               ROMLOC_EXPORTED = ROMLOC	; inserted here, because ROMLOC is not allowed to be exported
-007594  1               IO_PAGE = IO_START_ADDR
-007594  1               .EXPORT IO_PAGE
-007594  1               .EXPORT ROMLOC_EXPORTED
-007594  1               .EXPORT REALIO
-007594  1               .EXPORT INIT
-007594  1               
+004066  1               ;TSTACK:	BLOCK	13600	;LGB: removed, I don't need this at all in my simulator (I assume the PDP-10 based one needed this?)
+004066  1               .ENDIF
+004066  1               
+004066  1               ;LGB: removed, I am not sure what it does, PURGE is probably meant to delete macros in MACRO-10?
+004066  1               ;IF2,<
+004066  1               ;	PURGE	A,X,Y
+004066  1               ;>
+004066  1               ;IFNDEF	START,<START==0>
+004066  1               ;	END	$Z+START
+004066  1               
+004066  1               .IF	REALIO = 0
+004066  1  AD 00 D0 18  SIMULATION_TARGET_ROUTINES
+00406A  1  60 AD 00 D0  
+00406E  1  C9 00 F0 F9  
+004074  1               .ENDIF
+004074  1               
+004074  1               .OUT .SPRINTF("LGB: ROMLOC=$%04X", ROMLOC)
+004074  1               .OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
+004074  1               
+004074  1               ROMLOC_EXPORTED = ROMLOC	; inserted here, because ROMLOC is not allowed to be exported (.SET stuff not a constant sym)
+004074  1               IO_PAGE = IO_START_ADDR		; simulator wants this label name
+004074  1               .EXPORT IO_PAGE
+004074  1               .EXPORT ROMLOC_EXPORTED
+004074  1               .EXPORT REALIO
+004074  1               .EXPORT INIT
+004074  1               

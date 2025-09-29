@@ -27,7 +27,7 @@ class Console(object):
     COLS, ROWS = 80, 25
     FONT_W, FONT_H = 9, 16      # FONT_W = 9 -> leave an empty pixel after a 8-width font
     WIDTH, HEIGHT = COLS * FONT_W, ROWS * FONT_H
-    KBD_BUFFER_SIZE = 16
+    KBD_BUFFER_SIZE = 120       # actually it's also a line buffer, so it shouldn't be too short ...
     CURSOR_CODE = 219
     COLOUR = (
         (0, 255, 100),      # 0: BRIGHT GREEN
@@ -144,6 +144,9 @@ class Console(object):
 
     def _push_input(self, c):
 
+        if self.input_line_ready:
+            print("KBD: blocked keyboard push: unconsumed line buffer is already ready")
+            return
         if c == 8:
             if len(self.kbdbuf) > 0:
                 self.kbdbuf.popleft()
@@ -165,19 +168,21 @@ class Console(object):
 
     def read_keyboard(self):
 
-        if self.kbdbuf:
-            value = self.kbdbuf.popleft()
-            if len(self.kbdbuf) == 0:
-                self.input_line_ready = False
-            return value & 0x7F
-        return 0
-
-    def read_keyboard_line(self):
-
-        if self.input_line_ready:
-            return self.read_keyboard()
-        else:
+        if len(self.kbdbuf) == 0:
+            self.input_line_ready = False
             return 0
+        value = self.kbdbuf.popleft()
+        if len(self.kbdbuf) == 0:
+            self.input_line_ready = False
+        return value
+
+    def read_queue_size(self):
+
+        return len(self.kbdbuf)
+
+    def read_input_line_ready(self):
+
+        return self.input_line_ready
 
     def handle_events(self):
 
@@ -189,7 +194,8 @@ class Console(object):
                 if sym == sdl2.SDLK_F9:
                     return False
                 elif sym == sdl2.SDLK_F1:
-                    print("F1 pressed!")
+                    #print("F1 pressed!")
+                    pass
                 elif sym == sdl2.SDLK_RETURN:
                     self._push_input(13)
                 elif sym == sdl2.SDLK_BACKSPACE:
@@ -197,7 +203,7 @@ class Console(object):
             elif self.event.type == sdl2.SDL_TEXTINPUT:
                 text = self.event.text.text.decode("utf-8")
                 for ch in text:
-                    print(f"Typed char: {ch} (ord={ord(ch)})")
+                    print(f"KBD: Typed char: {ch} (ord={ord(ch)})")
                     self._push_input(ord(ch))
         return True
 
@@ -235,6 +241,8 @@ class MyIO(object):
             if ALLOW_DEBUG_READING_CONSOLE:
                 print(f"IO: reading console at PC=${cpu.r.pc:04X} caller on stack is ${ret:04X}")
             return con.read_keyboard()
+        elif addr == 1:
+            return con.read_queue_size() + (128 if con.read_input_line_ready() else 0)
         return 0xFF
     def write(self, addr, value):
         if addr == 0:
@@ -318,26 +326,55 @@ def load_lst(fn):
     return db, sym
 
 
-def run(arg):
+
+def load_labels(fn):
+    db = {}
+    with open(fn, "rt") as f:
+        for line in f:
+            line = line.strip().split()
+            if len(line) < 3 or line[0] != "al":
+                continue
+            addr = int(line[1], 16)
+            sym = line[2].lstrip(".")
+            if sym.startswith("__"):
+                continue
+            if sym.endswith("_EXPORTED"):
+                sym = sym[:-9]
+            db[sym] = addr
+    for a in ("ROMLOC", "INIT", "REALIO", "IO_PAGE"):
+        if a not in db:
+            raise RuntimeError(f"Sym-file {fn} does not contain symbol {a}")
+    return db
+
+
+
+def run(fn):
     global cpu, con, mem, mmu, io, lst, sym
-    if len(arg) != 2:
-        raise RuntimeError("Bad usage.")
-    lst, sym = load_lst(arg[1])
-    with open(arg[0], "rb") as rom:
+    fn_base = re.sub(r"-uncut$", "", re.sub(r"\..*$", "", fn))
+    lst, sym = load_lst(fn_base + ".lst")
+    with open(fn, "rb") as rom:
         rom = rom.read()
     ID = b'{{CUT#HERE}}'
     pos = rom.find(ID)
-    if pos < 0:
-        raise RuntimeError("Cannot find ID in the binary")
-    loc  = rom[pos + len(ID) + 0] + (rom[pos + len(ID) + 1] * 256)
-    init = rom[pos + len(ID) + 2] + (rom[pos + len(ID) + 3] * 256)
-    IO_PAGE_ADDR = rom[pos + len(ID) + 4] + (rom[pos + len(ID) + 5] * 256)
-    realio = rom[pos + len(ID) + 6]
-    rest = pos + len(ID) + 7
+    if pos >= 0:
+        print(f"FOUND marker <{ID.decode('UTF-8')}> at position <{pos}>, using old code")
+        loc  = rom[pos + len(ID) + 0] + (rom[pos + len(ID) + 1] * 256)
+        init = rom[pos + len(ID) + 2] + (rom[pos + len(ID) + 3] * 256)
+        IO_PAGE_ADDR = rom[pos + len(ID) + 4] + (rom[pos + len(ID) + 5] * 256)
+        realio = rom[pos + len(ID) + 6]
+        rest = pos + len(ID) + 7
+    else:
+        print(f"NOT FOUND market <{ID.decode('UTF-8')}>, using new code")
+        exported = load_labels(fn_base + ".sym")
+        loc = exported["ROMLOC"]
+        init = exported["INIT"]
+        IO_PAGE_ADDR = exported["IO_PAGE"]
+        realio = exported["REALIO"]
     print(f"Position={pos} ROMLOC={loc:04X} INIT={init:04X} REALIO={realio} IO_PAGE_ADDR=${IO_PAGE_ADDR:04X}")
     if realio != 0:
         raise RuntimeError("Need SIMULATE target to set up in the source, ie REALIO must be 0")
-    rom = rom[rest:]                    # "cut out" the real ROM image part of the "uncut" version of "ROM"
+    if pos >= 0:
+        rom = rom[rest:]                    # "cut out" the real ROM image part of the "uncut" version of "ROM"
     rom = rom.rstrip(b'\x00')
     mem = bytearray(0x10000)            # full 64K address space for 6502
     mem[loc:loc+len(rom)] = rom         # replace the memory content at "ROM"
@@ -348,7 +385,7 @@ def run(arg):
     cpu = CPU(mmu)
     cpu.reset()
     con = Console("MBASIC-6502 SIMULATOR")
-    con.putstring(f"SIMULATION: ROM=${loc:04X}-${loc+len(rom)-1:04X} INIT=${init:04X} IO=${IO_PAGE_ADDR:04X}\r\n")
+    con.putstring(f"SIMULATION: ROM=${loc:04X}-${loc+len(rom)-1:04X} INIT=${init:04X} SIO=${IO_PAGE_ADDR:04X}\r\n")
     running = True
     t0, t1, cycles = sdl2.SDL_GetTicks(), 0, 0
     while running:
@@ -367,5 +404,7 @@ def run(arg):
 
 
 if __name__ == "__main__":
-    run(sys.argv[1:])
+    if len(sys.argv) != 2:
+        raise RuntimeError("Bad usage.")
+    run(sys.argv[1])
     sys.exit(0)

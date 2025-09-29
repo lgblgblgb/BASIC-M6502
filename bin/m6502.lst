@@ -10,6 +10,7 @@ Current file: m6502-converted.asm
 000000r 1               ; (C)1976 MICRO-SOFT (the original source)
 000000r 1               ; (C)2025 Gabor Lenart "LGB" - the conversion/modification/etc project of mine to port this to CA65 assembler
 000000r 1               
+000000r 1               .SEGMENT "RAM"
 000000r 1               .INCLUDE "macros.inc"
 000000r 2               .MACRO	ORG	addr
 000000r 2               	.ORG	addr
@@ -1180,17 +1181,17 @@ Current file: m6502-converted.asm
 000110  1               ; SUBTTL	DISPATCH TABLES, RESERVED WORDS, AND ERROR TEXTS.
 000110  1               
 000110  1               
-000110  1               ; LGB: the trick that the "cutter" then extract the real binary, MUST be exactly before "ORG ROMLOC"
-000110  1  7B 7B 43 55  .BYTE	"{{CUT#HERE}}"
-000114  1  54 23 48 45  
-000118  1  52 45 7D 7D  
-00011C  1  00 20        .WORD	ROMLOC
-00011E  1  56 3E        .WORD	INIT	; also give information about the entry point
-000120  1  00 D0        .WORD	IO_START_ADDR
-000122  1  00           .BYTE	REALIO
-000123  1               ; LGB: end of hack
-000123  1               
-000123  1               	ORG	ROMLOC
+000110  1               ;; LGB: the trick that the "cutter" then extract the real binary, MUST be exactly before "ORG ROMLOC"
+000110  1               ;; LGB: needs for the old version of "cutter", only
+000110  1               ;.BYTE	"{{CUT#HERE}}"
+000110  1               ;.WORD	ROMLOC
+000110  1               ;.WORD	INIT	; also give information about the entry point
+000110  1               ;.WORD	IO_START_ADDR
+000110  1               ;.BYTE	REALIO
+000110  1               ;; LGB: end of hack
+000110  1               
+000110  1               .SEGMENT "ROM"			;LGB
+000110  1               	ORG	ROMLOC
 002000  1               
 002000  1  FE 25 1B 25  STMDSP: ADR(END-1)
 002004  1  3D 2A C9 26  
@@ -7604,5 +7605,10 @@ Current file: m6502-converted.asm
 007594  1               .OUT .SPRINTF("LGB: ROMLOC=$%04X", ROMLOC)
 007594  1               .OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
 007594  1               
-007594  1               
+007594  1               ROMLOC_EXPORTED = ROMLOC	; inserted here, because ROMLOC is not allowed to be exported
+007594  1               IO_PAGE = IO_START_ADDR
+007594  1               .EXPORT IO_PAGE
+007594  1               .EXPORT ROMLOC_EXPORTED
+007594  1               .EXPORT REALIO
+007594  1               .EXPORT INIT
 007594  1               

@@ -41,7 +41,6 @@ also MICRO-SOFT - is a registered trendmark owned by Microsoft, ... sorry, IANAL
 * `m6502-orig.asm` - my "hand modified" version of the above, to easy the task of the converter script, which does not do a full automated conversion
 * `m6502-converted.asm` - the result assembly file from my conversion, which should be assembled with CA65
 * `converter.py` - my VERY ugly converter, under constant hacking and rewriting/experimenting - does a "half job", manual work is needed before (see above the comment on file `m6502-orig.asm`)
-* `cutter.py` - cuts the final binary, see the "in depth" section's "link" sub-section ... Quite unfortunate ...
 
 ## Assembly process
 

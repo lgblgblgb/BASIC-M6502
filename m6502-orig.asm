@@ -1082,14 +1082,16 @@ PAGE
 SUBTTL	DISPATCH TABLES, RESERVED WORDS, AND ERROR TEXTS.
 
 
-; LGB: the trick that the "cutter" then extract the real binary, MUST be exactly before "ORG ROMLOC"
-.BYTE	"{{CUT#HERE}}"
-.WORD	ROMLOC
-.WORD	INIT	; also give information about the entry point
-.WORD	IO_START_ADDR
-.BYTE	REALIO
-; LGB: end of hack
+;; LGB: the trick that the "cutter" then extract the real binary, MUST be exactly before "ORG ROMLOC"
+;; LGB: needs for the old version of "cutter", only
+;.BYTE	"{{CUT#HERE}}"
+;.WORD	ROMLOC
+;.WORD	INIT	; also give information about the entry point
+;.WORD	IO_START_ADDR
+;.BYTE	REALIO
+;; LGB: end of hack
 
+.SEGMENT "ROM"			;LGB
 	ORG	ROMLOC
 
 STMDSP: ADR(END-1)
@@ -7387,4 +7389,9 @@ SIMULATION_TARGET_ROUTINES
 .OUT .SPRINTF("LGB: ROMLOC=$%04X", ROMLOC)
 .OUT .SPRINTF("LGB: INIT  =$%04X", INIT)
 
-
+ROMLOC_EXPORTED = ROMLOC	; inserted here, because ROMLOC is not allowed to be exported
+IO_PAGE = IO_START_ADDR
+.EXPORT IO_PAGE
+.EXPORT ROMLOC_EXPORTED
+.EXPORT REALIO
+.EXPORT INIT

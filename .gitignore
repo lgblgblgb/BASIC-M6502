@@ -8,5 +8,6 @@ m6502-changes.diff
 /*.bin
 /*.lst
 /*.map
+/*.sym
 /test
 /backup

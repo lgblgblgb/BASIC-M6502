@@ -122,9 +122,8 @@ class Console(object):
             for y in range(self.FONT_H):
                 line = font[i * self.FONT_H + y]
                 for x in range(self.FONT_W):
-                    if x < 7 and line & (1 << (7 - x)):
-                        # Yeah, horrible trick. However the "font sheet" (texture) is done only once at startup
-                        sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(i * self.FONT_W + x, y, 1, 1)), fg)
+                    # Yeah, horrible trick. However the "font sheet" (texture) is done only once at startup
+                    sdl2.SDL_FillRect(surface, ctypes.byref(sdl2.SDL_Rect(i * self.FONT_W + x, y, 1, 1)), fg if x < 8 and line & (1 << (7 - x)) else bg)
         texture = sdl2.SDL_CreateTextureFromSurface(self.renderer.renderer, surface)
         sdl2.SDL_FreeSurface(surface)
         print("Font texture prepared within {} msecs for a {}x{} font.".format(sdl2.SDL_GetTicks() - t0, self.FONT_W, self.FONT_H))

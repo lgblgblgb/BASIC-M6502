@@ -1,8 +1,8 @@
 MAPFILE	= m6502.map
-SYMFILE = m6502.sym
-LSTFILE	= m6502.lst
+SYMFILE = bin/m6502.sym
+LSTFILE	= bin/m6502.lst
 DIFFFILE= m6502-changes.diff
-BIN	= m6502.bin
+BIN	= bin/m6502.bin
 SRCOLD	= m6502-orig-really.asm
 SRC	= m6502-orig.asm
 SRC65	= m6502-converted.asm
@@ -24,16 +24,10 @@ $(SRC65): $(SRC) macros.inc $(ALLDEPS)
 $(BIN): $(SRC65) $(ALLDEPS)
 	$(CL65) $(CL65OPTS) -o $@ $<
 
-publish: $(BIN)
-	cp $(BIN) $(LSTFILE) $(SYMFILE) bin/
-
-bin/$(BIN) bin/$(LSTFILE) bin/$(SYMFILE): $(BIN) $(ALLDEPS)
-	$(MAKE) publish
-
-simulator: bin/$(BIN) bin/$(LSTFILE) bin/$(SYMFILE) $(ALLDEPS)
-	$(PYTHON) simulator.py bin/$(BIN)
+simulator:
+	$(PYTHON) simulator.py $(BIN)
 
 clean:
-	rm -f $(MAPFILE) $(SYMFILE) $(LSTFILE) $(DIFFFILE) $(BIN) $(SRC65).tmp
+	rm -f $(SRC65).tmp $(DIFFFILE) $(MAPFILE) *.o
 
 .PHONY: all clean simulator publish

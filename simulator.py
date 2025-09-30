@@ -363,7 +363,7 @@ def run(fn):
         realio = rom[pos + len(ID) + 6]
         rest = pos + len(ID) + 7
     else:
-        print(f"NOT FOUND market <{ID.decode('UTF-8')}>, using new code")
+        print(f"NOT FOUND marker <{ID.decode('UTF-8')}>, using new code")
         exported = load_labels(fn_base + ".sym")
         loc = exported["ROMLOC"]
         init = exported["INIT"]
